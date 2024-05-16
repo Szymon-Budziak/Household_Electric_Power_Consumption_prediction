@@ -17,6 +17,7 @@ tensorflow = "^2.16.1"
 
 [tool.poetry.group.dev.dependencies]
 notebook = "^7.1.3"
+jupytext = "^1.16.2"
 
 [build-system]
 requires = ["poetry-core"]
