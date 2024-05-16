@@ -9,6 +9,11 @@ packages = [{ include = "household_power_consumption", from = "src" }]
 
 [tool.poetry.dependencies]
 python = ">=3.11"
+numpy = "^1.26.4"
+pandas = "^2.2.2"
+matplotlib = "^3.9.0"
+scikit-learn = "^1.4.2"
+tensorflow = "^2.16.1"
 
 [tool.poetry.group.dev.dependencies]
 notebook = "^7.1.3"
