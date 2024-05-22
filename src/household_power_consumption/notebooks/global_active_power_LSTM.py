@@ -103,7 +103,7 @@ with open('../data/household_power_consumption.pkl', 'wb') as f:
 # # Train test split
 
 # load df from pickle file
-with open('../data/household_power_consumption.pkl', 'rb') as f:
+with open("../data/household_power_consumption.pkl", "rb") as f:
     df = pickle.load(f)
 
 # +
@@ -184,7 +184,7 @@ with open('../data/global_active_power_train_test_indices.pkl', 'wb') as f:
 # # LSTM model architecture
 
 # load train, test and indices from pickle
-with open('../data/global_active_power_train_test_indices.pkl', 'rb') as f:
+with open("../data/global_active_power_train_test_indices.pkl", "rb") as f:
     X_train, y_train, train_indices, X_test, y_test, test_indices = pickle.load(f)
 
 """
@@ -211,61 +211,41 @@ model.summary()
 history = model.fit(X_train, y_train, epochs=30, batch_size=64, verbose=1)
 
 # save the model
-model.save('../models/global_active_power_first_model.h5')
+model.save('../models/global_active_power_first_model.keras')
+
+# +
+# load the model
+from tensorflow.keras.models import load_model
+
+model = load_model('../models/global_active_power_first_model.keras')
+# -
 
 # predict the values
 prediction = model.predict(X_test)
 print(f'Shape of the prediction: {prediction.shape}')
 
-
-def inverse_transform_data(data, scaler, shape):
-    data_copies = np.repeat(data, shape[1], axis=-1)
-    transformed_data = scaler.inverse_transform(np.reshape(data_copies, (len(data), shape[1])))[:, 0]
-    print(f"Shape of the transformed data: {transformed_data.shape}")
-    return transformed_data
-
+# +
+from household_power_consumption.utils import inverse_transform_data
 
 # inverse transform the scaled data, repeat the prediction to match the shape of the original data
 prediction = inverse_transform_data(prediction, scaler, df_for_testing.shape)
+# -
 
 # inverse transform the scaled data, repeat the original data to match the shape of the prediction
 original = inverse_transform_data(y_test, scaler, df_for_testing.shape)
 
 # +
 # calculate the metrics
-from sklearn.metrics import mean_squared_error, mean_absolute_error, mean_absolute_percentage_error, \
-    root_mean_squared_error
+from household_power_consumption.utils import calculate_metrics
 
-def calucalte_metrics(original, prediction):
-    mse = mean_squared_error(original, prediction)
-    print(f'Mean Squared Error: {mse:.4f}')
-    print(f'Mean Absolute Error: {mean_absolute_error(original, prediction):.4f}')
-    print(f'Mean Absolute Percentage Error: {mean_absolute_percentage_error(original, prediction):.4f}')
-    print(f'Root Mean Squared Error: {root_mean_squared_error(original, prediction):.4f}')
-    return mse
+mse = calculate_metrics(original, prediction)
 
-
-# -
-
-mse = calucalte_metrics(original, prediction)
-
-
+# +
 # plot the original and predicted data
-def plot_original_and_predicted_data(original, prediction, test_indices, mse, title):
-    plt.figure(figsize=(22, 12))
-    plt.plot(test_indices, original, color='red', label='Real Global Active Power')
-    plt.plot(test_indices, prediction, color='blue', label='Predicted Global Active Power')
-    plt.text(0.04, 0.9, f'MSE: {mse:.3f}', horizontalalignment='center', verticalalignment='center',
-            transform=plt.gca().transAxes, fontsize=12)
-    plt.title(f'{title}')
-    plt.xlabel('Time')
-    plt.ylabel('Global Active Power')
-    plt.legend()
-    plt.savefig(f'../images/{title.lower().replace(" ", "_")}.png')
-    plt.show()
-
+from household_power_consumption.utils import plot_original_and_predicted_data
 
 plot_original_and_predicted_data(original, prediction, test_indices, mse, 'Global Active Power Prediction')
+# -
 
 # ## Predicting future values
 
@@ -303,24 +283,19 @@ for i in range(time_step, len(full_df_scaled_array)):
     full_df.iloc[i, 0] = prediction
 # -
 
-new_array = np.array(all_data)
-new_array = new_array.reshape(-1, 1)
+new_array = np.array(all_data).reshape(-1, 1)
 y_pred_future_24_hours = inverse_transform_data(new_array, scaler, df_for_testing.shape)
 
+# +
+from household_power_consumption.utils import plot_24_hours_prediction
 
-def plot_24_hours_prediction(df_24_hours_future, df_24_hours_future_gap, y_pred_future_24_hours, title):
-    plt.figure(figsize=(20, 10))
-    plt.plot(df_24_hours_future.index, y_pred_future_24_hours, color='blue', label='Predicted Global Active Power')
-    plt.plot(df_24_hours_future.index, df_24_hours_future_gap, color='red', label='Real Global Active Power')
-    plt.title(f'{title}')
-    plt.xlabel('Time')
-    plt.ylabel('Global Active Power')
-    plt.legend()
-    plt.savefig(f'../images/{title.lower().replace(' ', '_')}.png')
-    plt.show()
-
-
-plot_24_hours_prediction(df_24_hours_future, df_24_hours_future_gap, y_pred_future_24_hours, 'Global Active Power Prediction 24 hours')
+plot_24_hours_prediction(
+    df_24_hours_future,
+    df_24_hours_future_gap,
+    y_pred_future_24_hours,
+    "Global Active Power Prediction 24 hours",
+)
+# -
 
 # ## Hyperparameter tuning
 
@@ -330,19 +305,8 @@ with open('../data/global_active_power_train_test_indices.pkl', 'rb') as f:
 
 import optuna
 
-
 # +
-def create_model(params):
-    model = Sequential()
-    model.add(Input(shape=(X_train.shape[1], X_train.shape[2])))
-    model.add(LSTM(params['units1'], return_sequences=True))
-    model.add(LSTM(params['units2']))
-    model.add(Dropout(params['dropout']))
-    model.add(Dense(1))
-
-    model.compile(loss='mean_squared_error', optimizer='adam')
-
-    return model
+from household_power_consumption.utils import create_model
 
 
 def objective(trial):
@@ -351,7 +315,7 @@ def objective(trial):
     dropout = trial.suggest_categorical('dropout', [0.2, 0.4, 0.6])
     batch_size = trial.suggest_categorical('batch_size', [32, 64, 128])
 
-    model = create_model({'units1': units1, 'units2': units2, 'dropout': dropout})
+    model = create_model({'units1': units1, 'units2': units2, 'dropout': dropout}, X_train.shape)
 
     history = model.fit(X_train, y_train, epochs=30, batch_size=batch_size, verbose=0, validation_split=0.2)
 
@@ -416,7 +380,7 @@ scaler = joblib.load('../models/scaler.pkl')
 prediction = inverse_transform_data(prediction, scaler, df_for_testing.shape)
 original = inverse_transform_data(y_test, scaler, df_for_testing.shape)
 
-mse = calucalte_metrics(original, prediction)
+mse = calculate_metrics(original, prediction)
 
 plot_original_and_predicted_data(original, prediction, test_indices, mse, "Global Active Power Prediction tuned LSTM")
 
@@ -460,8 +424,7 @@ for i in range(time_step, len(full_df_scaled_array)):
     full_df.iloc[i, 0] = prediction
 # -
 
-new_array = np.array(all_data)
-new_array = new_array.reshape(-1, 1)
+new_array = np.array(all_data).reshape(-1, 1)
 y_pred_future_24_hours = inverse_transform_data(new_array, scaler, df_for_testing.shape)
 
 plot_24_hours_prediction(
@@ -470,5 +433,3 @@ plot_24_hours_prediction(
     y_pred_future_24_hours,
     "Global Active Power Prediction tuned LSTM 24 hours",
 )
-
-
