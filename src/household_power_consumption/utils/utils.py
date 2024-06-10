@@ -8,7 +8,7 @@ from sklearn.metrics import (
     root_mean_squared_error,
 )
 from sklearn.preprocessing import MinMaxScaler
-from tensorflow.keras.layers import LSTM, Dense, Dropout, Input
+from tensorflow.keras.layers import LSTM, Dense, Dropout, Input, BatchNormalization
 from tensorflow.keras.models import Sequential
 
 __all__ = [
@@ -145,9 +145,21 @@ def create_model(params: dict, X_train_shape: tuple) -> Sequential:
     """
     model = Sequential()
     model.add(Input(shape=(X_train_shape[1], X_train_shape[2])))
+
+    # LSTM, BatchNormalization and Dropout layers
     model.add(LSTM(params['units1'], return_sequences=True))
-    model.add(LSTM(params['units2']))
+    model.add(BatchNormalization())
     model.add(Dropout(params['dropout']))
+
+    # LSTM, BatchNormalization and Dropout layers
+    model.add(LSTM(params['units2'], return_sequences=True))
+    model.add(BatchNormalization())
+    model.add(Dropout(params['dropout']))
+
+    # LSTM, BatchNormalization and Dropout layers
+    model.add(LSTM(params['units3']))
+    model.add(Dropout(params['dropout']))
+
     model.add(Dense(1))
 
     model.compile(loss='mean_squared_error', optimizer='adam')
