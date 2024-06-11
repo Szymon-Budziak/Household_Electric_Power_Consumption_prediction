@@ -2,7 +2,7 @@
 name = "household-electric-power-consumption-prediction"
 version = "0.1.0"
 description = "Time Series analysis of Household Electric Power Consumption"
-authors = ["Szymon-Budziak <szymonbudziak@gmail.com>"]
+authors = ["Szymon Budziak"]
 license = "MIT"
 readme = "README.md"
 packages = [{ include = "household_power_consumption", from = "src" }]
