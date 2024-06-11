@@ -121,7 +121,11 @@ original = inverse_transform_data(y_test, scaler, X_test.shape[1:])
 mse = calculate_metrics(original, prediction)
 
 plot_original_and_predicted_data(
-    original, prediction, test_indices, mse, "Global Active Power Prediction tuned LSTM"
+    original,
+    prediction,
+    test_indices,
+    mse,
+    "Global Active Power Prediction tuned complex LSTM",
 )
 
 # ## Predicting future values - tuned LSTM model
@@ -175,5 +179,5 @@ plot_24_hours_prediction(
     df_24_hours_future,
     df_24_hours_future_gap,
     y_pred_future_24_hours,
-    "Global Active Power Prediction tuned LSTM 24 hours",
+    "Global Active Power Prediction tuned complex LSTM 24 hours",
 )
